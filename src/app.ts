@@ -9,6 +9,7 @@ import view from "@fastify/view";
 import ejs from "ejs";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
+import './types/fastify.d';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

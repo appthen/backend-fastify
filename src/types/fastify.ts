@@ -12,9 +12,9 @@ export interface FunctionContext {
         [fieldname: string]: MultipartFile[];
     } | MultipartFile[] | undefined;
     headers: Record<string, any>;
-    query: FastifyRequest['query'];
+    query: Record<string, any>;
     body: Record<string, any>;
-    params: FastifyRequest['params'];
+    params: Record<string, any>;
     method: FastifyRequest['method'];
     webSocket?: WebSocket;
     request: FastifyRequest;

@@ -8,7 +8,7 @@ export function createContext(
   // 创建 Express 兼容的 request 对象
   const expressRequest = {
     ...request,
-    path: request.url.split('?')[0], // 获取不带查询参数的路径
+    path: request.url.split('?')[0],
     url: request.url,
     method: request.method,
     params: request.params,
@@ -16,16 +16,18 @@ export function createContext(
     body: request.body,
     headers: request.headers,
     user: request.user || {},
-    // 添加常用的 request 方法
     get: (name: string) => request.headers[name.toLowerCase()],
     header: (name: string) => request.headers[name.toLowerCase()],
     accepts: (type: string) => {
       const accept = request.headers.accept || '';
       return accept.includes(type);
     },
-    is: (type: string) => {
+    is: (types: string | string[]) => {
       const contentType = request.headers['content-type'] || '';
-      return contentType.includes(type);
+      if (Array.isArray(types)) {
+        return types.some(type => contentType.includes(type));
+      }
+      return contentType.includes(types);
     },
     protocol: request.protocol,
     secure: request.protocol === 'https',
@@ -41,7 +43,7 @@ export function createContext(
     signedCookies: request.signedCookies || {},
     secret: undefined,
     app: request.server,
-    route: request.route || {},
+    route: request.route || { path: '', method: '' },
     originalUrl: request.url,
     baseUrl: request.url.split('?')[0],
     accepted: [],
@@ -51,12 +53,11 @@ export function createContext(
     param: (name: string) => request.params[name],
     isAuthenticated: () => !!request.user,
     isUnauthenticated: () => !request.user,
-  };
+  } as FastifyRequest;
 
   // 创建 Express 兼容的 response 对象
   const expressResponse = {
     ...reply,
-    // 添加常用的 response 方法
     status: (code: number) => {
       reply.status(code);
       return expressResponse;
@@ -86,12 +87,8 @@ export function createContext(
       reply.send(path);
       return expressResponse;
     },
-    redirect: (statusOrUrl: string | number, url?: string) => {
-      if (typeof statusOrUrl === 'number') {
-        reply.redirect(url || '/', statusOrUrl);
-      } else {
-        reply.redirect(statusOrUrl);
-      }
+    redirect: (url: string, statusCode?: number) => {
+      reply.redirect(url, statusCode || 302);
       return expressResponse;
     },
     render: (view: string, options?: any) => {
@@ -112,7 +109,7 @@ export function createContext(
       reply.header(name, value);
       return expressResponse;
     },
-    cookie: (name: string, value: any, options?: any) => {
+    cookie: (name: string, value: string, options?: any) => {
       reply.setCookie(name, value, options);
       return expressResponse;
     },
@@ -120,7 +117,7 @@ export function createContext(
       reply.clearCookie(name, options);
       return expressResponse;
     },
-  };
+  } as FastifyReply;
 
   return {
     request: expressRequest,

@@ -1,11 +1,49 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { FunctionContext } from '../types/fastify';
+import cloud from '@@/utils/cloud';
 
-export function createContext(
+export async function createContext(
   request: FastifyRequest,
   reply: FastifyReply
-): FunctionContext {
+): Promise<FunctionContext> {
   // 创建 Express 兼容的 request 对象
+  const authentication = request.headers['authorization'] || request.headers['Authorization'];
+  let user = {};
+  if (authentication && typeof authentication === 'string') {
+    try {
+      const parsed = cloud.parseToken(authentication.replace('Bearer ', ''));
+      if (parsed) {
+        user = parsed;
+      }
+    } catch(e) {}
+  }
+
+  // 获取上传的文件
+  let files = [];
+  try {
+    if (request && (request as any).files) {
+      try {
+        // 使用 saveRequestFiles 方法处理文件
+        files = await (request as any).saveRequestFiles();
+        
+        // 添加文件路径映射
+        files = files.map(file => ({
+          ...file,
+          path: file.filepath || file.path // 兼容两种路径属性
+        }));
+        
+      } catch (iteratorError) {
+        console.error('文件处理错误:', iteratorError);
+        console.error('错误堆栈:', iteratorError.stack);
+        throw iteratorError;
+      }
+    }
+  } catch (error) {
+    console.error('文件处理错误:', error);
+    console.error('错误堆栈:', error.stack);
+    files = [];
+  }
+  
   const expressRequest = {
     ...request,
     path: request.url.split('?')[0],
@@ -15,7 +53,6 @@ export function createContext(
     query: request.query,
     body: request.body,
     headers: request.headers,
-    user: request.user || {},
     get: (name: string) => request.headers[name.toLowerCase()],
     header: (name: string) => request.headers[name.toLowerCase()],
     accepts: (type: string) => {
@@ -53,7 +90,7 @@ export function createContext(
     param: (name: string) => request.params[name],
     isAuthenticated: () => !!request.user,
     isUnauthenticated: () => !request.user,
-  } as FastifyRequest;
+  } as unknown as FastifyRequest;
 
   // 创建 Express 兼容的 response 对象
   const expressResponse = {
@@ -118,15 +155,20 @@ export function createContext(
       return expressResponse;
     },
   } as FastifyReply;
-
+  // fix some bug
+  const query = {};
+  Object.keys(request.query).forEach(k => {
+    query[k] = Array.isArray(request.query[k]) ? request.query[k][0] : request.query[k];
+  });
   return {
     request: expressRequest,
     response: expressResponse,
     method: request.method,
     params: request.params,
-    query: request.query,
+    query,
     body: request.body,
     headers: request.headers,
-    user: request.user || {},
+    user: user || {},
+    files: files,
   };
 } 

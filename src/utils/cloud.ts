@@ -5,15 +5,19 @@ const JWT_SECRET = process.env.JWT_SECRET || '-';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 export default {
+  mongo,
   database() {
     return mongo.db;
   },
   shared: new Map<string, any>(),
   // 生成 JWT token
   getToken: (payload: Record<string, number | string | object>) => {
-    return jwt.sign(payload, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN
-    });
+    // 如果 payload 中已经包含 exp，则移除 expiresIn 选项
+    const options: jwt.SignOptions = {};
+    if (!('exp' in payload)) {
+      options.expiresIn = JWT_EXPIRES_IN;
+    }
+    return jwt.sign(payload, JWT_SECRET, options);
   },
 
   // 解析 JWT token

@@ -3,6 +3,18 @@ logs
 *.log
 npm-debug.log*
 
+.pnpm-store
+dist/
+.rollup.cache/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+
 # Runtime data
 pids
 *.pid
@@ -56,3 +68,4 @@ profile-*
 profile*
 *clinic*
 *flamegraph*
+.vercel

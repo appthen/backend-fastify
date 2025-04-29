@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PNPM_HOME=/root/.local/share/pnpm
+    volumes:
+      - ./:/app
+      - /app/node_modules
+      - pnpm-store:/root/.local/share/pnpm/store/v10
+    networks:
+      - app-network
+
+  mongodb:
+    image: mongo:4.4
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=example
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  pnpm-store:
+    driver: local 

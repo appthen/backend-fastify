@@ -1,0 +1,179 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 云函数开发规范
+
+## 1. 文件命名规范
+- 使用小写字母
+- 多个单词用连字符（-）连接
+- 例如：`get-user-info.ts`, `update-product.ts`
+
+## 2. 导入规范
+```typescript
+// 1. 工具类导入
+import cloud from '@@/utils/cloud';
+import mongo from "@@/utils/mongodb";
+import { Response } from '@/utils/func';
+
+// 2. 类型导入
+
+**框架级别的类型**
+import { FunctionContext } from '@@/types/fastify';
+
+**业务相关的类型**
+import { Goods } from '@/types';
+
+所有涉及到业务流程的，请一定参参考合适的模型，再决策写代码，这样保证代码中用到的数据模型字段都是正确的，尽量不要改动模型，需要改动的时候直接告诉我
+
+// 3. 其他模块导入
+import { xxx } from '@/utils/xxx';
+```
+
+## 3. 函数结构规范
+```typescript
+export default async function (ctx: FunctionContext) {
+  try {
+    // 1. 参数验证
+    const { param1, param2 } = ctx.body;
+    
+    // 2. 业务逻辑
+    const result = await xxx();
+    
+    // 3. 返回结果
+    return Response.ok(result);
+  } catch (error) {
+    // 4. 错误处理
+    return Response.failed(error.message);
+  }
+}
+```
+
+## 4. 错误处理规范
+```typescript
+// 使用统一的错误处理方式
+if (!param1) {
+  return Response.failed('参数错误');
+}
+
+try {
+  // 业务逻辑
+} catch (error) {
+  return Response.failed(error.message);
+}
+```
+
+## 5. 日志规范
+```typescript
+// 使用统一的日志格式
+console.log(`[${new Date().toISOString()}] [函数名] 操作描述`);
+console.error(`[${new Date().toISOString()}] [函数名] 错误描述`);
+```
+
+## 6. 注释规范
+```typescript
+/**
+ * 函数描述
+ * @param {FunctionContext} ctx - 上下文对象
+ * @returns {Promise<Response>} 返回结果
+ */
+export default async function (ctx: FunctionContext) {
+  // 实现逻辑
+}
+```
+
+## 7. 数据库操作规范
+```typescript
+// 使用统一的数据库操作方式
+const db = cloud.database();
+const collection = db.collection('collection_name');
+
+// 查询操作
+const result = await collection.find({}).toArray();
+
+// 更新操作
+await collection.updateOne({}, { $set: {} });
+
+// 删除操作
+await collection.deleteOne({});
+```
+
+## 8. 响应格式规范
+```typescript
+// 成功响应
+return Response.ok(data);
+
+// 错误响应
+return Response.failed(message);
+
+// 自定义响应
+return Response.custom(code, message, data);
+```
+
+## 9. 权限验证规范
+```typescript
+// 在函数开始处进行权限验证
+if (!ctx.user) {
+  return Response.failed('未登录');
+}
+
+// 角色验证
+if (!ctx.user.roleList.includes('admin')) {
+  return Response.failed('无权限');
+}
+```
+
+## 10. 参数验证规范
+```typescript
+// 使用统一的参数验证方式
+const { param1, param2 } = ctx.body;
+if (!param1 || !param2) {
+  return Response.failed('参数不完整');
+}
+
+// 类型验证
+if (typeof param1 !== 'string') {
+  return Response.failed('参数类型错误');
+}
+```
+
+## 示例模板
+```typescript
+/**
+ * 函数描述
+ * @param {FunctionContext} ctx - 上下文对象
+ * @returns {Promise<Response>} 返回结果
+ */
+export default async function (ctx: FunctionContext) {
+  try {
+    // 1. 参数验证
+    const { param1, param2 } = ctx.body;
+    if (!param1 || !param2) {
+      return Response.failed('参数不完整');
+    }
+
+    // 2. 权限验证
+    if (!ctx.user) {
+      return Response.failed('未登录');
+    }
+
+    // 3. 业务逻辑
+    console.log(`[${new Date().toISOString()}] [函数名] 开始处理`);
+    const result = await xxx();
+
+    // 4. 返回结果
+    return Response.ok(result);
+  } catch (error) {
+    // 5. 错误处理
+    console.error(`[${new Date().toISOString()}] [函数名] 错误: ${error.message}`);
+    return Response.failed(error.message);
+  }
+}
+```
+
+## 规范目的
+1. 保持代码风格统一
+2. 提高代码可维护性
+3. 减少错误发生的可能性
+4. 方便团队协作

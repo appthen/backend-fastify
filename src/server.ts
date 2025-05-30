@@ -91,12 +91,19 @@ if (cluster.isPrimary) {  // 使用 isPrimary 替代 isMaster
   console.log(`主进程 ${process.pid} 正在运行`);
   savePid();
 
+  // 用于标记是否是优雅重启
+  let isGracefulRestart = false;
+  // 上次重启时间
+  let lastRestartTime = 0;
+  // 最小重启间隔（毫秒）
+  const MIN_RESTART_INTERVAL = 5000;
+
   // 启动工作进程
   cluster.fork();
 
   // 监听工作进程退出
   cluster.on('exit', (worker, code, signal) => {
-    if (signal !== 'SIGTERM') {
+    if (signal !== 'SIGTERM' && !isGracefulRestart) {
       console.log(`工作进程 ${worker.process.pid} 已退出，正在重启...`);
       cluster.fork();
     }
@@ -104,7 +111,23 @@ if (cluster.isPrimary) {  // 使用 isPrimary 替代 isMaster
 
   // 监听 SIGUSR2 信号，用于优雅重启
   process.on('SIGUSR2', async () => {
+    // 检查是否满足最小重启间隔
+    const now = Date.now();
+    if (now - lastRestartTime < MIN_RESTART_INTERVAL) {
+      console.log(`重启间隔太短（小于 ${MIN_RESTART_INTERVAL}ms），忽略此次重启请求`);
+      return;
+    }
+
+    // 检查是否已经在重启过程中
+    if (isGracefulRestart) {
+      console.log('已经在重启过程中，忽略此次重启请求');
+      return;
+    }
+
     console.log('收到重启信号，准备重启工作进程...');
+    isGracefulRestart = true;
+    lastRestartTime = now;
+    
     const workers = Object.values(cluster.workers || {}) as Worker[];
     
     // 逐个重启工作进程
@@ -155,6 +178,7 @@ if (cluster.isPrimary) {  // 使用 isPrimary 替代 isMaster
     }
     
     console.log('所有工作进程已更新完成');
+    isGracefulRestart = false;
   });
 
   // 处理进程终止信号
